@@ -1,0 +1,37 @@
+version: '3'
+
+services:
+  db:
+    image: postgres:13
+    restart: always
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_USER: worker
+      POSTGRES_PASSWORD: worker
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  web:
+    build: .
+    restart: always
+    command: sh -c "
+      python3 manage.py migrate &&
+      uwsgi --http :8000 --module parrotsite.wsgi --static-map /static=static"
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      DJANGO_DB_HOST: db
+      DJANGO_DB_NAME: app
+      DJANGO_DB_USER: worker
+      DJANGO_DB_PASS: worker
+      DJANGO_DB_PORT: 5432
+      DJANGO_DEBUG: "False"
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
